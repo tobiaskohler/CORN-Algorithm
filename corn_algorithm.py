@@ -125,7 +125,12 @@ class Expert():
         self.bt = {} # portfolio weights
 
     @timeit
-    def estimate_portfolio_weights(self, history: pd.DataFrame):
+    def estimate_portfolio_weights(self, history: pd.DataFrame) -> pd.DataFrame:
+        '''
+        This function estimates the portfolio weights in hindsight for a given time series of asset prices.
+        It returns a pandas DataFrame with the portfolio weights for each time step.
+        '''
+        
         historic_start_date = history.index[0]
         historic_end_date = history.index[-1]
         print(f'Received history of shape {history.shape}. Start date: {historic_start_date}, end date: {historic_end_date}')
@@ -144,60 +149,66 @@ class Expert():
         else:
             bt_dict = {}
             # move through time series with a window size of w and calculate correlatioon coefficient between most recent window and all previous windows
+            
             for t in range(self.w*2, len(history)):
                 most_recent_window = history.iloc[t-self.w:t] #does not change
                 start_most_recent_window = most_recent_window.index[0]
                 end_most_recent_window = most_recent_window.index[-1]
                 
-                cprint(f'length of most recent window: {len(most_recent_window)}\nstart of most recent window: {start_most_recent_window}\nend of most recent window: {end_most_recent_window}', 'green')
+                # cprint(f'length of most recent window: {len(most_recent_window)}\nstart of most recent window: {start_most_recent_window}\nend of most recent window: {end_most_recent_window}', 'green')
                 
                 previous_windows_period = history.iloc[:t-self.w] #must be looped over again
                 start_previous_windows = previous_windows_period.index[0]
                 end_previous_windows = previous_windows_period.index[-1]
                 
-                cprint(f'length of previous windows period: {len(previous_windows_period)}\nstart of previous windows period: {start_previous_windows}\nend of previous windows period: {end_previous_windows}', 'blue')
+                # cprint(f'length of previous windows period: {len(previous_windows_period)}\nstart of previous windows period: {start_previous_windows}\nend of previous windows period: {end_previous_windows}', 'blue')
                 
-                # loop over previous_windows_period and calculate correlation coefficient between most_recent_window and each previous window with size self.w
+                # loop over previous_windows_period and calculate correlation coefficient between most_recent_window and each previous window with size self.w. If at least one similiar-correlated window is found, the portfolio weights are no more calculated using uniform weights. If no similiar-correlated window is found, the portfolio weights are calculated using uniform weights.
                 
                 Ct_filled = False
                 Ct = {}
 
                 for i in range(len(previous_windows_period) - self.w + 1):
-                    cprint(f"   Within the loop of previos_windows_period: Trading day {i}\n   Total length of previos_windows_period: {len(previous_windows_period)}", "magenta")
+                    '''
+                    This loops searches for the most recent window in the previous windows period. It then calculates the correlation coefficient between the two windows and stores the result in a dictionary. The dictionary is then used to calculate the portfolio weights. If no correlation coefficient is above the threshold, the portfolio weights are set to uniform.
+                    '''
+                    
+                    # cprint(f"   Within the loop of previos_windows_period: Trading day {i}\n   Total length of previos_windows_period: {len(previous_windows_period)}", "magenta")
                     
                     previous_window = previous_windows_period.iloc[i:i+self.w]
                     start_previous_window = previous_window.index[0]
                     end_previous_window = previous_window.index[-1]
                     
-                    cprint(f'   length of previous window: {len(previous_window)}\n   start of previous window: {start_previous_window}\n   end of previous window: {end_previous_window}', 'magenta')
+                    # cprint(f'   length of previous window: {len(previous_window)}\n   start of previous window: {start_previous_window}\n   end of previous window: {end_previous_window}', 'magenta')
                     
                     # calculate correlation coefficient between most_recent_window and previous_window by first flattening them into two vectors, each with a length of 400 (20x20) and then using the standard correlation coefficient formula to calculate the correlation between the two vectors
 
                     corr = np.corrcoef(most_recent_window.values.flatten(), previous_window.values.flatten())[0,1]
-                    print(f'correlation coefficient between most recent window and previous window: {corr}')
+                    # print(f'correlation coefficient between most recent window and previous window: {corr}')
 
                     if abs(corr) >= self.rho:
                         cprint(f'Threshold passed! Added period from {start_previous_window} till {end_previous_window} with {corr} to Ct', 'red')
                         
                         Ct[2*self.w+(i+1)] = [start_previous_window, end_previous_window, corr]
 
-                        
                         #self.Ct[2*self.w+(i+1)] = (start_previous_window, end_previous_window, corr)
                         self.Ct[t] = Ct
-
                         Ct_filled = True
                         
                         # Calculate portfolio weights by passing over to optimization function (simplex)
-                    
-                    
-                    # only use equal weights if no similar-correlated window was found
-                    if not Ct_filled:
+                        cprint(f'{self.Ct}', 'yellow')
                         
-                        # If no correlation threshold is found, then equal portfolio weights for that day
                         bt = [1/len(history.columns)]*len(history.columns)
-                        bt_dict[2*self.w+(i+1)] = bt
+                        bt_dict[2*self.w+(t+1)] = bt
                         
-                        self.bt.update(bt_dict)
+                if Ct_filled: # if at least one similar-correlated window is found, the portfolio weights are based on optimization
+                    self.bt.update(bt_dict)
+
+                else: # if no similar-correlated window is found, the portfolio weights are set to uniform
+                    bt = [1/len(history.columns)]*len(history.columns)
+                    bt_dict[2*self.w+(t+1)] = bt
+                    
+                    self.bt.update(bt_dict)
 
         
 if __name__ == '__main__':
@@ -207,12 +218,18 @@ if __name__ == '__main__':
 
     expert = Expert(w=window_size, rho=rho_threshold)
 
-    for t in range(1, 50):
+    for t in range(1, 70):
         
+        # 1. Step: Identify all similar-correlated windows in hindsight
         
         expert.estimate_portfolio_weights(history=log_returns.iloc[:t])
+        portfolio_weights = pd.DataFrame.from_dict(expert.bt, orient='index', columns=log_returns.columns)
         
-        #cprint(f"Expert's portfolio weights in hindsight for day {t}: {expert.bt}\n", "cyan")
+        cprint(f'{portfolio_weights}', 'green')
         cprint(f'Expert\'s correlation similarity set in hindsight for day {t}: {expert.Ct}\n', 'cyan')
 
+
+        # 2. Step: Pass over portfolio weights to backtester to calculate portfolio returns
+        
+        #  This is where we can adjust that the rebalancing happens every 20 days or every 10 days or every 5 days etc.
 
