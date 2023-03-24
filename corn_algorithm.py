@@ -139,7 +139,7 @@ class Expert():
         print(f'Received history of shape {history.shape}. Start date: {historic_start_date}, end date: {historic_end_date}')
         j = 0
         
-        if len(history) <= (2*self.w):
+        if len(history) <= (3*self.w):
             print("Not enough data to calculate 2 x window. Creating uniform weights for portfolio.")
             bt = [1/len(history.columns)]*len(history.columns)
             for i in range(0, len(history)):
@@ -153,7 +153,7 @@ class Expert():
             bt_dict = {}
             # move through time series with a window size of w and calculate correlatioon coefficient between most recent window and all previous windows
             
-            for t in range(self.w*2, len(history)):
+            for t in range(self.w*3, len(history)):
                 most_recent_window = history.iloc[t-self.w:t] #does not change
                 start_most_recent_window = most_recent_window.index[0]
                 end_most_recent_window = most_recent_window.index[-1]
@@ -183,6 +183,13 @@ class Expert():
                     start_previous_window = previous_window.index[0]
                     end_previous_window = previous_window.index[-1]
                     
+                    #the optim_window is used for calculation of the portfolio weights, if a correlated window is found. It should start after the end of the previous window and should end window-length later.
+                    optim_window = history.iloc[i+self.w:i+self.w*2]
+                
+                    start_optim_window = optim_window.index[0]
+                    end_optim_window = optim_window.index[-1]
+                    
+                    cprint(f'Previous window: {start_previous_window} till {end_previous_window}\n Window for optimization:    {start_optim_window} till {end_optim_window}', 'yellow')
                     # cprint(f'   length of previous window: {len(previous_window)}\n   start of previous window: {start_previous_window}\n   end of previous window: {end_previous_window}', 'magenta')
                     
                     # calculate correlation coefficient between most_recent_window and previous_window by first flattening them into two vectors, each with a length of 400 (20x20) and then using the standard correlation coefficient formula to calculate the correlation between the two vectors
@@ -250,7 +257,7 @@ if __name__ == '__main__':
     #calculate time it takes to run the loop 
     start = time.time()
 
-    for t in range(1, 51):
+    for t in range(1, 100):
         
         # 1. Step: Identify all similar-correlated windows in hindsight
         
@@ -262,7 +269,7 @@ if __name__ == '__main__':
 
     end = time.time()
     runtime = end - start
-    cprint(f'Runtime for loop: {runtime}', 'red')
+    cprint(f'Runtime for loop: {runtime/60} minutes.', 'red')
 
         # 2. Step: Pass over portfolio weights to backtester to calculate portfolio returns
         
