@@ -176,8 +176,7 @@ class Expert():
                         
                         self.Ct[2*self.w+(i+1)] = (start_previous_window, end_previous_window, corr)
                         
-                        # Calculate portfolio weights by passing over self.Ct optimization function (simplex)
-                        
+                        # Calculate portfolio weights by passing over to optimization function (simplex)
                     
                     else:
                         
