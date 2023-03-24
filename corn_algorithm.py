@@ -157,6 +157,8 @@ class Expert():
                 cprint(f'length of previous windows period: {len(previous_windows_period)}\nstart of previous windows period: {start_previous_windows}\nend of previous windows period: {end_previous_windows}', 'blue')
                 
                 # loop over previous_windows_period and calculate correlation coefficient between most_recent_window and each previous window with size self.w
+                
+                Ct_filled = False
                 for i in range(len(previous_windows_period) - self.w + 1):
                     cprint(f"   Within the loop of previos_windows_period: Trading day {i}\n   Total length of previos_windows_period: {len(previous_windows_period)}", "magenta")
                     
@@ -175,10 +177,11 @@ class Expert():
                         cprint(f'Threshold passed! Added period from {start_previous_window} till {end_previous_window} with {corr} to Ct', 'red')
                         
                         self.Ct[2*self.w+(i+1)] = (start_previous_window, end_previous_window, corr)
-                        
+                        Ct_filled = True
                         # Calculate portfolio weights by passing over to optimization function (simplex)
                     
-                    else:
+                    # only use equal weights if no similar-correlated window was found
+                    if not Ct_filled:
                         
                         # If no correlation threshold is found, then equal portfolio weights for that day
                         bt = [1/len(history.columns)]*len(history.columns)
@@ -197,7 +200,7 @@ if __name__ == '__main__':
     for t in range(1, 44):
         expert.estimate_portfolio_weights(history=log_returns.iloc[:t])
         
-        #cprint(f"Expert's portfolio weights in hindsight for day {t}: {expert.bt}\n", "cyan")
+        cprint(f"Expert's portfolio weights in hindsight for day {t}: {expert.bt}\n", "cyan")
         cprint(f'Expert\'s correlation similarity set in hindsight for day {t}: {expert.Ct}\n', 'cyan')
 
 
