@@ -6,7 +6,7 @@ import plotly.graph_objs as go
 
 
 
-def find_optimal_portfolio(returns):
+def find_optimal_portfolio(returns: pd.DataFrame):
     
     '''
     Long only portfolio optimization using the Sharpe ratio as the objective function.
