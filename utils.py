@@ -1,4 +1,6 @@
-# write a helper function which is called cprint() that takes a string and a color as arguments and prints the string in that color
+import time
+
+
 
 def cprint(string, color):
     colors = {
@@ -12,3 +14,15 @@ def cprint(string, color):
         'reset': '\033[0m'
     }
     print(colors[color] + string + colors['reset'])
+    
+    
+
+
+def timeit(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f'Time it took for {func.__name__} to run: {end - start} seconds')
+        return result
+    return wrapper
