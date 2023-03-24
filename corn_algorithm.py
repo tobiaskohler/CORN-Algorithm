@@ -189,7 +189,7 @@ class Expert():
                     start_optim_window = optim_window.index[0]
                     end_optim_window = optim_window.index[-1]
                     
-                    cprint(f'Previous window: {start_previous_window} till {end_previous_window}\n Window for optimization:    {start_optim_window} till {end_optim_window}', 'yellow')
+                    #cprint(f'Previous window: {start_previous_window} till {end_previous_window}\n Window for optimization:    {start_optim_window} till {end_optim_window}', 'yellow')
                     # cprint(f'   length of previous window: {len(previous_window)}\n   start of previous window: {start_previous_window}\n   end of previous window: {end_previous_window}', 'magenta')
                     
                     # calculate correlation coefficient between most_recent_window and previous_window by first flattening them into two vectors, each with a length of 400 (20x20) and then using the standard correlation coefficient formula to calculate the correlation between the two vectors
@@ -207,9 +207,9 @@ class Expert():
                         
                         # NEW CODE, USING DF AND CONCATENATING TOGETHER ALL CORRELATION SIMILARITY SETS
                         
-                        # create a pandas df called Ct, containing all returns for all n-days for each previous_window that is similar-correlated to the most_recent_window
+                        # create a pandas df called Ct, containing all returns for all n-days for each optim_window (which is the subsequent window after the previous_window) that is similar-correlated to the most_recent_window
                         Ct = pd.DataFrame()
-                        Ct = pd.concat([Ct, previous_window], axis=0)
+                        Ct = pd.concat([Ct, optim_window], axis=0)
                         Ct_list.append(Ct)
                         
                         Ct_filled = True
@@ -229,8 +229,8 @@ class Expert():
                     cprint(f'Length of Ct_list: {len(Ct_list)}', 'yellow')
 
                     optimal_weights_list = []
-                    for i in range(len(Ct_list)):
-                        optimal_weights = find_optimal_portfolio(Ct_list[i])
+                    for n in range(len(Ct_list)):
+                        optimal_weights = find_optimal_portfolio(Ct_list[n], plot=False, period=t, list_order=n)
                         # cprint(f'Optimal weights based on similiar-correlated set: {optimal_weights}', 'green')
                         optimal_weights_list.append(optimal_weights)
                     
@@ -257,8 +257,8 @@ if __name__ == '__main__':
     #calculate time it takes to run the loop 
     start = time.time()
 
-    for t in range(1, 100):
-        
+    for t in range(1, 140):
+        #2,21 Min
         # 1. Step: Identify all similar-correlated windows in hindsight
         
         expert.estimate_portfolio_weights(history=log_returns.iloc[:t])
@@ -266,6 +266,18 @@ if __name__ == '__main__':
         
         cprint(f'{portfolio_weights}', 'green')
         cprint(f'Expert\'s correlation similarity set in hindsight for day {t}: {expert.Ct}\n', 'cyan')
+        
+        # plot portfolio weights for each day, use dark background
+        plt.style.use('dark_background')
+        portfolio_weights.plot(kind='bar', stacked=True, figsize=(20,10))
+        plt.title(f'Portfolio weights for each day in hindsight, window size: {window_size}, rho threshold: {rho_threshold}')
+        plt.xlabel('Day')
+        plt.ylabel('Portfolio weights')
+        plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
+        
+        # save as png, naming convetion is: period_window_size_rho_threshold_day.png
+        plt.savefig(f'output/period_{window_size}_{rho_threshold}_{t}.png')
+        
 
     end = time.time()
     runtime = end - start

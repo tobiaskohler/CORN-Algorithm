@@ -2,11 +2,13 @@ import numpy as np
 from scipy.optimize import minimize
 import pandas as pd
 import plotly.graph_objs as go
+import os
 
 
 
 
-def find_optimal_portfolio(returns: pd.DataFrame):
+def find_optimal_portfolio(returns: pd.DataFrame, period: int, list_order: int, plot: bool = False):
+
     
     '''
     Long only portfolio optimization using the Sharpe ratio as the objective function.
@@ -28,8 +30,27 @@ def find_optimal_portfolio(returns: pd.DataFrame):
 
     # Solve the optimization problem
     opt = minimize(objective, x0, args=returns, bounds=bounds, constraints=constraints)
+    
+    if plot:
+        # Save bar chart of weights to /output folder, check if /output exists
+        df = pd.DataFrame(opt.x)
+        df = df.T
+        df.columns = returns.columns
+        fig = go.Figure(data=[go.Bar(x=df.columns, y=df.loc[0])])
+        fig.update_layout(title='Optimal weights', xaxis_title='Asset', yaxis_title='Weights', template='plotly_dark')
+
+        for i in range(len(df.columns)):
+            fig.add_annotation(x=df.columns[i], y=df.loc[0][i], text=str(round(df.loc[0][i], 2)), showarrow=False)
+        
+        if not os.path.exists('output'):
+            os.makedirs('output')        
+        
+        # naming convetion for the image file: weights_period_i_window_j.png
+        fig.write_image('output/weights_period_{}_window_{}.png'.format(period, list_order))
 
     return opt.x
+
+
 
 
 if __name__ == '__main__':
