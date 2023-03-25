@@ -59,33 +59,94 @@ def csv_to_numpy(investment_universe):
     
     return log_returns
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def expert_portfolio_weight(data: np.array, window: int, rho: float) -> np.array:
-    
     '''
-    clean and simple implementation of the CORN algorithm. Supported by numba.
+    Clean and simple implementation of the CORN algorithm. Supported by numba.
     '''
-    
-    # loop over data
-    
+
+    window_shape = (window, len(data[0]))
+    print(window_shape)
     correlation_array = np.zeros((len(data), len(data[0]))) #initialize correlation array
-    print(correlation_array)
-    
+    rolling_windows = np.lib.stride_tricks.sliding_window_view(data, window_shape) # Das ist der richtige Algorithmus, damit hab ich alle rollierenden Fensterchen in einer Matrix
+
+    # loop over rolling_windows array and compute correlation for each window and ALL previous windows
+
+    # Compute correlation for each window and ALL previous windows
     for i in range(2*window, len(data)):
+        # Define most_recent_window as the last window in the rolling windows
+        most_recent_window = rolling_windows[i-window]
+        most_recent_window_flattened = most_recent_window.reshape(-1, len(data[0])) #das passt jetzt. für jeden tag hab ich das 20er fenster als 20x20 array
+        print(most_recent_window_flattened.shape)
+        # Define previous_window_period as the windows before the most recent window
+        previous_window_period = rolling_windows[:i-window]
+        print(previous_window_period.shape)
         
-        #define most_recent_window which is the last window 
-        most_recent_window = data[i-window:i]
         
-        #define previos_window_period which is the rest of the data
-        previous_window_period = data[:i-window]
         
-        #calculate correlation between most_recent_window and previous_window_period
-        correlation = np.corrcoef(most_recent_window, previous_window_period)[0,1]
         
-        #add to correlation_array
-        correlation_array[i] = correlation
+        # # Define previous_window_period as the windows before the most recent window
+        # previous_window_period = rolling_windows[:i-window]
+        # print(most_recent_window.shape, previous_window_period.shape)
+        # # Compute the correlation between most_recent_window and previous_window_period
+        # #corr_coef = np.corrcoef(most_recent_window, previous_window_period.reshape(-1, len(data[0])).T)
+        # correlation = corr_coef[0, 1:]
+
+        # # Add to correlation_array
+        # correlation_array[i, :len(correlation)] = correlation
+
+    return correlation_array
+
+
+
+
+
+    # for i in range(2*window, len(data)):
+    #     # define most_recent_window as the last window in the rolling windows
+    #     most_recent_window = rolling_windows[i-window].reshape(window, len(data[0]))
+
+    #     # define previous_window_period as the windows before the most recent window
+    #     previous_window_period = rolling_windows[:i-window].reshape(i-window, window*len(data[0]))
+
+    #     # compute the correlation between most_recent_window and previous_window_period
+    #     correlation = np.corrcoef(most_recent_window, previous_window_period.T)[0,1:]
+    #     print(correlation)
+        
+    #     # add to correlation_array
+    #     #correlation_array[i, :len(correlation)] = correlation
+
+    return correlation_array
+
         
         # Experiment with numba: it took forever...i dont know why. 
+        
+#         The CORrelation-driven Nonlocal means (CORN) algorithm involves calculating the correlation between a sliding window and a reference window at every time step in a time series. This process requires accessing overlapping subsets of the time series, which makes it challenging to vectorize in a straightforward way.
+
+# However, it is possible to use numpy functions to efficiently compute the correlation between the sliding and reference windows without explicitly looping through the time series. The numpy.correlate() function can be used to calculate the cross-correlation between two sequences, which can be used to compute the correlation between the sliding and reference windows.
+
+# Here's an example implementation of the CORN algorithm using numpy:
+
+# python
+
+# import numpy as np
+
+# def corn_algorithm(time_series, window_size):
+#     n = len(time_series)
+#     # Compute the rolling window of size window_size for each time step
+#     rolling_windows = np.lib.stride_tricks.sliding_window_view(time_series, window_size)
+
+#     # Compute the correlation between the most recent window and all the other windows
+#     reference_window = rolling_windows[-1]
+#     correlation = np.zeros(n-window_size)
+#     for i in range(n-window_size):
+#         sliding_window = rolling_windows[i]
+#         correlation[i] = np.correlate(sliding_window, reference_window)
+
+#     return correlation
+
+# This implementation uses numpy's sliding_window_view() function to compute the rolling windows for each time step. It then loops through the time series and uses numpy's correlate() function to compute the correlation between the most recent window and all the other windows.
+
+# Note that this implementation may still be slower than a fully vectorized implementation due to the overhead of creating the rolling window views and the loop over the time series. However, it should be more efficient than a naive implementation that explicitly loops through all the windows at each time step.
         
     return correlation_array
         
