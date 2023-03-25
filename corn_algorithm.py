@@ -258,7 +258,7 @@ if __name__ == '__main__':
     start = time.time()
 
     for t in range(1, 140):
-        #2,21 Min
+        
         # 1. Step: Identify all similar-correlated windows in hindsight
         
         expert.estimate_portfolio_weights(history=log_returns.iloc[:t])
@@ -267,17 +267,7 @@ if __name__ == '__main__':
         cprint(f'{portfolio_weights}', 'green')
         cprint(f'Expert\'s correlation similarity set in hindsight for day {t}: {expert.Ct}\n', 'cyan')
         
-        # plot portfolio weights for each day, use dark background
-        plt.style.use('dark_background')
-        portfolio_weights.plot(kind='bar', stacked=True, figsize=(20,10))
-        plt.title(f'Portfolio weights for each day in hindsight, window size: {window_size}, rho threshold: {rho_threshold}')
-        plt.xlabel('Day')
-        plt.ylabel('Portfolio weights')
-        plt.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
-        
-        # save as png, naming convetion is: period_window_size_rho_threshold_day.png
-        plt.savefig(f'output/period_{window_size}_{rho_threshold}_{t}.png')
-        
+
 
     end = time.time()
     runtime = end - start
