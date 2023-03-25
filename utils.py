@@ -16,13 +16,3 @@ def cprint(string, color):
     print(colors[color] + string + colors['reset'])
     
     
-
-
-def timeit(func):
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        end = time.time()
-        print(f'Time it took for {func.__name__} to run: {end - start} seconds')
-        return result
-    return wrapper
