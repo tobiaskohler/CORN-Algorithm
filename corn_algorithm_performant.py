@@ -77,10 +77,24 @@ def expert_portfolio_weight(data: np.array, window: int, rho: float) -> np.array
         # Define most_recent_window as the last window in the rolling windows
         most_recent_window = rolling_windows[i-window]
         most_recent_window_flattened = most_recent_window.reshape(-1, len(data[0])) #das passt jetzt. für jeden tag hab ich das 20er fenster als 20x20 array
-        print(most_recent_window_flattened.shape)
-        # Define previous_window_period as the windows before the most recent window
-        previous_window_period = rolling_windows[:i-window]
-        print(previous_window_period.shape)
+        
+        # Now look over all previous windows and compute correlation with most_recent_window
+        # if correlation coefficient is larger than rho, add to correlation_array
+        
+        for j in range(i-window):
+            previous_window = rolling_windows[j]
+            previous_window_flattened = previous_window.reshape(-1, len(data[0]))
+            print(f'Shape of previous_window_flattened: {previous_window_flattened.shape}')
+            print(previous_window_flattened)
+
+            #hier gehts morgen weiter, erstmal checken dass previous_window_flattened auch wirklich genau das Fenster vor dem aktuellen ist!!!!!!! FALLS JA HAB ICHS GESCHAFFT :)
+            
+            # correlation = np.corrcoef(most_recent_window_flattened, previous_window_flattened.T)[0,1:]
+            # if correlation > rho:
+            #     correlation_array[i, j] = correlation
+            # else:
+            #     correlation_array[i, j] = 0
+        
         
         
         
