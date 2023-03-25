@@ -1,12 +1,11 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
+from numba import jit
 
 
 
-
-
-def find_optimal_portfolio(returns: pd.DataFrame, period: int, list_order: int):
+def find_optimal_portfolio(returns: np.array, period: int, list_order: int):
 
     
     '''

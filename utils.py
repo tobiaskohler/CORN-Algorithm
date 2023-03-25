@@ -1,5 +1,5 @@
 import time
-
+from numba import jit
 
 
 def cprint(string, color):
