@@ -9,6 +9,9 @@ from portfolio_optimization import find_optimal_portfolio
 import numba as nb
 import time
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 
 def get_data(investment_universe):
@@ -72,12 +75,45 @@ def calc_corr_coeff(x, y):
     return corr_coeff
 
 
+def csv_to_pd(investment_universe: list):
+    '''
+    This function reads the log_returns from the .csv file and converts it to a pandas dataframe.
+    '''
+    log_returns_pd = pd.read_csv(f'input/{investment_universe}_log_returns.csv')
+    log_returns_pd = log_returns_pd.drop(columns=['Date'])
+
+    return log_returns_pd
+
+
+def plot_weights(investment_universe: list):
+    
+    weights = pd.read_csv(f'output/{investment_universe}_weights.csv')
+    
+    _asset_names = csv_to_pd(investment_universe)
+    assets = _asset_names.columns
+
+    weights.columns = assets
+    
+    plt.style.use('dark_background')
+    plt.figure(figsize=(20, 10))
+    plt.stackplot(weights.index, weights.T, labels=assets, colors=plt.cm.tab20.colors)
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+    plt.title('Portfolio weights in hindsight')
+    plt.xlabel('Trading day')
+    plt.ylabel('Weight')
+    plt.show()
+    
+    #print rows for which the sum of weights over columns is not 1
+    print(weights[weights.sum(axis=1) != 1])
+    
+
 @nb.njit()
 def calc_equal_weights(num_assets):
     '''
     This function calculates equally weighted weights for a given number of assets.
     '''
     weights = np.ones(num_assets) / num_assets
+
     return weights
 
 
@@ -88,6 +124,10 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
     ts_length = len(data)
     num_assets = len(data[0])
     weights_array = np.zeros((ts_length, num_assets)) #initialize weights_array
+    
+    for i in range(0, (2*window)):
+        weights = calc_equal_weights(num_assets)
+        weights_array[i] = weights
 
     for i in range(2*window, len(data)): 
         most_recent_window = rolling_windows[i-window]
@@ -101,7 +141,7 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
             corr_coeff = calc_corr_coeff(most_recent_window_flattened.flatten(), previous_window_flattened.flatten())
 
             if corr_coeff > rho: 
-                weights = np.ones(num_assets) / 1000
+                weights = np.ones(num_assets) / 10
                 weights_array[i] = weights
                 
                 # collect all timeframes in Ct, then loop over them and calculate the weights by passing over the optim function
@@ -111,29 +151,6 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
                 weights = calc_equal_weights(num_assets)
                 weights_array[i] = weights
              
-    print(weights_array)
-    print(len(weights_array))
-    print(weights_array.shape)
-    return weights_array
-            
-        # # print progress every 5%
-        # if i % (len(data) // 20) == 0:
-        #     print(f"{i / len(data) * 100:.2f}% done")
-        
-        
-        
-        
-        
-        # # Define previous_window_period as the windows before the most recent window
-        # previous_window_period = rolling_windows[:i-window]
-        # print(most_recent_window.shape, previous_window_period.shape)
-        # # Compute the correlation between most_recent_window and previous_window_period
-        # #corr_coef = np.corrcoef(most_recent_window, previous_window_period.reshape(-1, len(data[0])).T)
-        # correlation = corr_coef[0, 1:]
-
-        # # Add to correlation_array
-        # correlation_array[i, :len(correlation)] = correlation
-
     return weights_array
 
 
@@ -144,7 +161,8 @@ if __name__ == '__main__':
     
     investment_universe = ['SPY', 'VTI', 'QQQ', 'EFA', 'AGG', 'VWO', 'IJR', 'IJH', 'IWF', 'GLD', 'LQD', 'TLT', 'VNQ', 'IEF', 'SHY', 'DIA', 'VGK', 'VB', 'EXS1.DE', 'CAC.PA']
 
-    get_data(investment_universe)
+    #get_data(investment_universe)
+    
     log_returns_array = csv_to_numpy(investment_universe)
 
     start = time.perf_counter()
@@ -154,15 +172,21 @@ if __name__ == '__main__':
     window_shape = (window, len(log_returns_array[0]))
     rolling_windows = np.lib.stride_tricks.sliding_window_view(log_returns_array, window_shape)
 
-    correlation_array = expert_portfolio_weight(data=log_returns_array, rolling_windows=rolling_windows, window=window, rho=rho)
-    print("LOOP DONE")
+    portfolio_weights = expert_portfolio_weight(data=log_returns_array, rolling_windows=rolling_windows, window=window, rho=rho)
+    
     end = time.perf_counter()
     print("Elapsed = {}s".format((end - start)))
+    
+    # save weights to .csv file, subfolder output, concatenate with investment universe in filename
+    np.savetxt(f'output/{investment_universe}_weights.csv', portfolio_weights, delimiter=",")
+    
+    plot_weights(investment_universe=investment_universe)
+    
     
     #Elapsed = 801.9361368920017s #without numba
     #Elapsed = 71.72372195400021s # Factor 11.2 faster :)   fun calc_corr_coeff() implemented with numba, rest not
     
-    ###Implemented euqal weight calculations
+    ###Implemented equal weight calculations
     #Elapsed = 72.47795482299989s #without numba
     #Elapsed = 50.82744755800013s # Factor 1.4 faster :)   fun calc_corr_coeff() implemented with numba
     
