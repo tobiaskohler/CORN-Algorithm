@@ -6,8 +6,7 @@ import time
 from utils import *
 from portfolio_optimization import find_optimal_portfolio
 
-
-from numba import jit
+import numba as nb
 import time
 
 
@@ -59,7 +58,22 @@ def csv_to_numpy(investment_universe):
     
     return log_returns
 
-#@njit(nb.float64[:, :](nb.float64[:, :], nb.int64, nb.float64))
+
+
+@nb.njit()
+def calc_corr_coeff(x, y):
+    n = len(x)
+    mean_x = np.mean(x)
+    mean_y = np.mean(y)
+    cov = np.sum((x - mean_x) * (y - mean_y))
+    std_x = np.sqrt(np.sum((x - mean_x) ** 2))
+    std_y = np.sqrt(np.sum((y - mean_y) ** 2))
+    corr_coeff = cov / (std_x * std_y)
+    return corr_coeff
+
+
+
+#@nb.njit()
 def expert_portfolio_weight(data: np.array, window: int, rho: float) -> np.array:
     '''
     Clean and simple implementation of the CORN algorithm. Supported by numba. Returns weights for each period.
@@ -78,17 +92,16 @@ def expert_portfolio_weight(data: np.array, window: int, rho: float) -> np.array
             
             previous_window = rolling_windows[j]
             previous_window_flattened = previous_window.reshape(-1, len(data[0]))
-            
-            corr_coeff = np.corrcoef(most_recent_window_flattened.flatten(), previous_window_flattened.flatten())[0, 1]
 
-            if abs(corr_coeff) > rho:
-                #add to correlation-similiar-set called C_t
-                
+            corr_coeff = calc_corr_coeff(most_recent_window_flattened.flatten(), previous_window_flattened.flatten())
+
+            if corr_coeff > rho: 
+                print(corr_coeff)
                 
             
-    # print progress every 5%
-    if i % (len(data) // 20) == 0:
-        print(f"{i / len(data) * 100:.2f}% done")
+        # # print progress every 5%
+        # if i % (len(data) // 20) == 0:
+        #     print(f"{i / len(data) * 100:.2f}% done")
         
         
         
@@ -280,8 +293,9 @@ if __name__ == '__main__':
     end = time.perf_counter()
     print("Elapsed = {}s".format((end - start)))
     
-    #Elapsed = 801.9361368920017s
-    #
+    #Elapsed = 801.9361368920017s #without numba
+    
+    #Elapsed = 71.72372195400021s # Factor 11.2 faster :)   fun calc_corr_coeff() implemented with numba, rest not
     
     
     
