@@ -59,41 +59,36 @@ def csv_to_numpy(investment_universe):
     
     return log_returns
 
-#@jit(nopython=True)
+#@njit(nb.float64[:, :](nb.float64[:, :], nb.int64, nb.float64))
 def expert_portfolio_weight(data: np.array, window: int, rho: float) -> np.array:
     '''
-    Clean and simple implementation of the CORN algorithm. Supported by numba.
+    Clean and simple implementation of the CORN algorithm. Supported by numba. Returns weights for each period.
     '''
 
     window_shape = (window, len(data[0]))
     print(window_shape)
     correlation_array = np.zeros((len(data), len(data[0]))) #initialize correlation array
-    rolling_windows = np.lib.stride_tricks.sliding_window_view(data, window_shape) # Das ist der richtige Algorithmus, damit hab ich alle rollierenden Fensterchen in einer Matrix
+    rolling_windows = np.lib.stride_tricks.sliding_window_view(data, window_shape)
 
-    # loop over rolling_windows array and compute correlation for each window and ALL previous windows
-
-    # Compute correlation for each window and ALL previous windows
-    for i in range(2*window, len(data)):
-        # Define most_recent_window as the last window in the rolling windows
+    for i in range(2*window, len(data)): 
         most_recent_window = rolling_windows[i-window]
-        most_recent_window_flattened = most_recent_window.reshape(-1, len(data[0])) #das passt jetzt. für jeden tag hab ich das 20er fenster als 20x20 array
-        
-        # Now look over all previous windows and compute correlation with most_recent_window
-        # if correlation coefficient is larger than rho, add to correlation_array
-        
+        most_recent_window_flattened = most_recent_window.reshape(-1, len(data[0]))
+
         for j in range(i-window):
+            
             previous_window = rolling_windows[j]
             previous_window_flattened = previous_window.reshape(-1, len(data[0]))
-            print(f'Shape of previous_window_flattened: {previous_window_flattened.shape}')
-            print(previous_window_flattened)
-
-            #hier gehts morgen weiter, erstmal checken dass previous_window_flattened auch wirklich genau das Fenster vor dem aktuellen ist!!!!!!! FALLS JA HAB ICHS GESCHAFFT :)
             
-            # correlation = np.corrcoef(most_recent_window_flattened, previous_window_flattened.T)[0,1:]
-            # if correlation > rho:
-            #     correlation_array[i, j] = correlation
-            # else:
-            #     correlation_array[i, j] = 0
+            corr_coeff = np.corrcoef(most_recent_window_flattened.flatten(), previous_window_flattened.flatten())[0, 1]
+
+            if abs(corr_coeff) > rho:
+                #add to correlation-similiar-set called C_t
+                
+                
+            
+    # print progress every 5%
+    if i % (len(data) // 20) == 0:
+        print(f"{i / len(data) * 100:.2f}% done")
         
         
         
@@ -280,11 +275,12 @@ if __name__ == '__main__':
     log_returns_array = csv_to_numpy(investment_universe)
 
     start = time.perf_counter()
-    expert_portfolio_weight(data=log_returns_array, window=20, rho=0.2)
+    correlation_array = expert_portfolio_weight(data=log_returns_array, window=20, rho=0.2)
+    print("LOOP DONE")
     end = time.perf_counter()
     print("Elapsed = {}s".format((end - start)))
     
-    #Elapsed = 196.5547334699986s ohne numba
+    #Elapsed = 801.9361368920017s
     #
     
     
