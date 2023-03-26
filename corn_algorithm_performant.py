@@ -98,17 +98,12 @@ def plot_weights(investment_universe: list):
     plt.style.use('dark_background')
     plt.figure(figsize=(20, 10))
     plt.stackplot(weights.index, weights.T, labels=assets, colors=plt.cm.tab20.colors)
-    
-    # add legend below the plot
     plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=5, fancybox=True, shadow=True)
     plt.title('Portfolio weights in hindsight')
     plt.xlabel('Trading day')
     plt.ylabel('Weight')
-    plt.show()
-    
-    #print rows for which the sum of weights over columns is not 1
-    print(weights[weights.sum(axis=1) != 1])
-    
+    plt.savefig(f'output/{investment_universe}_weights.png')
+
 
 @nb.njit()
 def calc_equal_weights(num_assets):
@@ -117,6 +112,11 @@ def calc_equal_weights(num_assets):
     '''
     weights = np.ones(num_assets) / num_assets
     return weights
+
+
+
+
+
 
 def find_optimal_portfolio(returns: np.array, return_target: float = None):
     '''
@@ -128,21 +128,21 @@ def find_optimal_portfolio(returns: np.array, return_target: float = None):
     bounds = tuple((0,1) for _ in range(n_assets))
     constraints = [{'type': 'eq', 'fun': lambda x: np.sum(x) - 1}]
     x0 = np.ones(n_assets) / n_assets # start with equal weights
-
-    # Define the objective function to maximize returns and minimize risk
-    def objective(x, returns):
+    
+    
+    def objective(x, returns: np.array):
         portfolio_return = np.sum(returns.mean(axis=0) * x)
         portfolio_risk = np.sqrt(np.dot(x.T, np.dot(np.cov(returns.T), x)))
         return -portfolio_return + portfolio_risk
 
     # Solve the optimization problem
     opt = minimize(objective, x0, args=returns, bounds=bounds, constraints=constraints)
-    
+
     # Calculate the Sharpe ratio
     sharpe_ratio = np.sum(returns.mean(axis=0) * opt.x) / np.sqrt(np.dot(opt.x.T, np.dot(np.cov(returns.T), opt.x)))
 
     # Return the optimal weights and the Sharpe ratio as a tuple
-    return (sharpe_ratio, opt.x)
+    return sharpe_ratio, opt.x
 
 
 def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: int, rho: float) -> np.array:
@@ -189,7 +189,9 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
                 _weights = find_optimal_portfolio(elem)
                 _weights_list.append(_weights)
                 
-            # calculate average weights
+            # calculate average weights, here we can tune a lot!
+            
+            # implement NUMBA for portfolio_optim function!
             weights = np.mean(_weights_list, axis=0)
 
             weights_array[i] = weights[1]
