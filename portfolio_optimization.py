@@ -28,8 +28,13 @@ def find_optimal_portfolio(returns: np.array, period: int, list_order: int):
 
     # Solve the optimization problem
     opt = minimize(objective, x0, args=returns, bounds=bounds, constraints=constraints)
+    
+    # Calculate the Sharpe ratio
+    sharpe_ratio = np.sum(returns.mean(axis=0) * opt.x) / np.sqrt(np.dot(opt.x.T, np.dot(np.cov(returns.T), opt.x)))
 
-    return opt.x
+    print(f"Period: {period}, List order: {list_order}, Sharpe ratio: {sharpe_ratio}")
+    # Return the optimal weights and the Sharpe ratio as a tuple
+    return (sharpe_ratio, opt.x)
 
 
 if __name__ == '__main__':

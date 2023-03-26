@@ -7,6 +7,7 @@ from utils import *
 from portfolio_optimization import find_optimal_portfolio
 
 import numba as nb
+from scipy.optimize import minimize
 import time
 
 import matplotlib.pyplot as plt
@@ -97,7 +98,9 @@ def plot_weights(investment_universe: list):
     plt.style.use('dark_background')
     plt.figure(figsize=(20, 10))
     plt.stackplot(weights.index, weights.T, labels=assets, colors=plt.cm.tab20.colors)
-    plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+    
+    # add legend below the plot
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=5, fancybox=True, shadow=True)
     plt.title('Portfolio weights in hindsight')
     plt.xlabel('Trading day')
     plt.ylabel('Weight')
@@ -113,8 +116,33 @@ def calc_equal_weights(num_assets):
     This function calculates equally weighted weights for a given number of assets.
     '''
     weights = np.ones(num_assets) / num_assets
-
     return weights
+
+def find_optimal_portfolio(returns: np.array, return_target: float = None):
+    '''
+    Long only portfolio optimization that maximizes returns and minimizes risk.
+    '''
+
+    # Set up the optimization problem
+    n_assets = returns.shape[1]
+    bounds = tuple((0,1) for _ in range(n_assets))
+    constraints = [{'type': 'eq', 'fun': lambda x: np.sum(x) - 1}]
+    x0 = np.ones(n_assets) / n_assets # start with equal weights
+
+    # Define the objective function to maximize returns and minimize risk
+    def objective(x, returns):
+        portfolio_return = np.sum(returns.mean(axis=0) * x)
+        portfolio_risk = np.sqrt(np.dot(x.T, np.dot(np.cov(returns.T), x)))
+        return -portfolio_return + portfolio_risk
+
+    # Solve the optimization problem
+    opt = minimize(objective, x0, args=returns, bounds=bounds, constraints=constraints)
+    
+    # Calculate the Sharpe ratio
+    sharpe_ratio = np.sum(returns.mean(axis=0) * opt.x) / np.sqrt(np.dot(opt.x.T, np.dot(np.cov(returns.T), opt.x)))
+
+    # Return the optimal weights and the Sharpe ratio as a tuple
+    return (sharpe_ratio, opt.x)
 
 
 def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: int, rho: float) -> np.array:
@@ -123,18 +151,20 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
     '''
     ts_length = len(data)
     num_assets = len(data[0])
-    correlation_similiar_set_array = np.zeros((ts_length, num_assets)) #initialize correlation_similiar_set_array
+    correlation_similiar_set_list = [] #initialize correlation_similiar_set_array
     weights_array = np.zeros((ts_length, num_assets)) #initialize weights_array
+
     
     for i in range(0, (2*window)):
         weights = calc_equal_weights(num_assets)
+
         weights_array[i] = weights
 
     for i in range(2*window, len(data)): 
         most_recent_window = rolling_windows[i-window]
         most_recent_window_flattened = most_recent_window.reshape(-1, num_assets)
         
-        correlation_similiar_set_filled = False 
+        correlation_similiar_set_filled = False
 
         for j in range(i-window):
             
@@ -143,28 +173,32 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
 
             corr_coeff = calc_corr_coeff(most_recent_window_flattened.flatten(), previous_window_flattened.flatten())
 
-            if corr_coeff > rho: 
-                
-                
-                # 1. add previous_window_flattened to correlation_similiar_set_array
-                # 2. if at least one is found, set correlation_similiar_set_filled to True
-                # 3. after loop, if correlation_similiar_set_filled is True, calculate weights for the most recent window by passing over to portfolio_optim function
-                # 4. save weights in weights_array at index i   
+            if abs(corr_coeff) > rho: 
                 
                 correlation_similiar_set_filled = True
-                print(f'correlation_similiar_set_filled has been filled! corr_coeff: {corr_coeff}')
+                correlation_similiar_set_list.append(previous_window_flattened)
+
+        if correlation_similiar_set_filled:
+            _weights_list = []
+            
+            # 1. loop over correlation_similiar_set_list and pass over to portfolio_optim function
+            # 2. function returns a dictionary with sharpe-ratio and weights
+            # 3. select top k sharpe-ratios and calculate the average weights
+            # 4. save weights in weights_array at index iq
+            for elem in correlation_similiar_set_list:
+                _weights = find_optimal_portfolio(elem)
+                _weights_list.append(_weights)
                 
-                
-                #weights_array[i] = weights
-                
-                
-                
-                
-            else:
-                # calculate weights for the most recent window by equally weighting all assets
-                weights = calc_equal_weights(num_assets)
-                weights_array[i] = weights
-             
+            # calculate average weights
+            weights = np.mean(_weights_list, axis=0)
+
+            weights_array[i] = weights[1]
+
+        else:
+            # calculate weights for the most recent window by equally weighting all assets
+            weights = calc_equal_weights(num_assets)
+            weights_array[i] = weights
+
     return weights_array
 
 
@@ -182,7 +216,7 @@ if __name__ == '__main__':
     start = time.perf_counter()
     
     window = 20
-    rho = 0.2
+    rho = 0.5
     window_shape = (window, len(log_returns_array[0]))
     rolling_windows = np.lib.stride_tricks.sliding_window_view(log_returns_array, window_shape)
 
