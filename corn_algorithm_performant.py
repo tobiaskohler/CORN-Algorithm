@@ -116,29 +116,33 @@ def calc_equal_weights(num_assets):
 def benchmarking(weights, log_returns, window_size):
     
     # Calculate the benchmark return for equal weights
-    benchmark_returns = np.sum(log_returns * calc_equal_weights(log_returns.shape[1]), axis=1)
+    universal_returns = np.sum(log_returns * calc_equal_weights(log_returns.shape[1]), axis=1)
     #cut away window-size from benchmark_returns (from end)
-    benchmark_returns = benchmark_returns[:-window_size]
-    
+    universal_returns = universal_returns[:-window_size]
     # Calculate cumulative returns
-    benchmark_cum_returns = np.exp(np.cumsum(benchmark_returns, axis=0))
+    universal_cum_returns = np.exp(np.cumsum(universal_returns, axis=0))
+    
+    # Calculate the cumulative return of only "SPY" in log returns
+    spy_returns = log_returns[:, 0]
+    spy_cum_returns = np.exp(np.cumsum(spy_returns, axis=0))
     
     # Calculate the portfolio return for weights
     corn_returns = np.sum(log_returns * weights, axis=1)
-    
-    # Calculate the benchmark return
     corn_cum_returns = np.exp(np.cumsum(corn_returns, axis=0))
 
     # plot the cumulative returns
     plt.style.use('dark_background')
     plt.figure(figsize=(20, 10))
-    plt.plot(benchmark_cum_returns, label='Benchmark')
+    plt.plot(universal_cum_returns, label='Benchmark')
     plt.plot(corn_cum_returns, label='Portfolio')
+    plt.plot(spy_cum_returns, label='SPY')
     plt.legend(loc='upper left')
     plt.title('Cumulative returns')
     plt.xlabel('Trading day')
     plt.ylabel('Cumulative returns')
-    plt.savefig(f'output/{investment_universe}_cum_returns.png')
+    
+    # save plot, add investment universe and len of weights to filename
+    plt.savefig(f'output/{investment_universe}_cum_returns{len(weights)}.png')
 
 
 def find_optimal_portfolio(returns: np.array, return_target: float = None):
@@ -267,5 +271,7 @@ if __name__ == '__main__':
     #Elapsed = 72.47795482299989s #without numba
     #Elapsed = 50.82744755800013s # Factor 1.4 faster :)   fun calc_corr_coeff() implemented with numba
     
+    #12 minuten für 600 datepunkten
+    #Elapsed = 6778.527474586999s für 1000 datenpunkte - 112 minuten (1.8h)
     
     
