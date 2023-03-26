@@ -73,15 +73,14 @@ def calc_corr_coeff(x, y):
 
 
 
-#@nb.njit()
+@nb.njit()
 def expert_portfolio_weight(data: np.array, window: int, rho: float) -> np.array:
     '''
     Clean and simple implementation of the CORN algorithm. Supported by numba. Returns weights for each period.
     '''
 
     window_shape = (window, len(data[0]))
-    print(window_shape)
-    correlation_array = np.zeros((len(data), len(data[0]))) #initialize correlation array
+    weights_array = np.zeros((len(data), len(data[0]))) #initialize weights_array
     rolling_windows = np.lib.stride_tricks.sliding_window_view(data, window_shape)
 
     for i in range(2*window, len(data)): 
@@ -117,7 +116,7 @@ def expert_portfolio_weight(data: np.array, window: int, rho: float) -> np.array
         # # Add to correlation_array
         # correlation_array[i, :len(correlation)] = correlation
 
-    return correlation_array
+    return weights_array
 
 
 
