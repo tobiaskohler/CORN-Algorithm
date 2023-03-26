@@ -113,10 +113,12 @@ def calc_equal_weights(num_assets):
     return weights
 
 
-def benchmarking(weights, log_returns):
+def benchmarking(weights, log_returns, window_size):
     
     # Calculate the benchmark return for equal weights
     benchmark_returns = np.sum(log_returns * calc_equal_weights(log_returns.shape[1]), axis=1)
+    #cut away window-size from benchmark_returns (from end)
+    benchmark_returns = benchmark_returns[:-window_size]
     
     # Calculate cumulative returns
     benchmark_cum_returns = np.exp(np.cumsum(benchmark_returns, axis=0))
@@ -137,9 +139,6 @@ def benchmarking(weights, log_returns):
     plt.xlabel('Trading day')
     plt.ylabel('Cumulative returns')
     plt.savefig(f'output/{investment_universe}_cum_returns.png')
-    
-
-
 
 
 def find_optimal_portfolio(returns: np.array, return_target: float = None):
@@ -184,7 +183,7 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
 
         weights_array[i] = weights
 
-    for i in range(2*window, len(data)): 
+    for i in range(2*window, len(data)-window): 
         most_recent_window = rolling_windows[i-window]
         most_recent_window_flattened = most_recent_window.reshape(-1, num_assets)
         
@@ -195,12 +194,16 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
             previous_window = rolling_windows[j]
             previous_window_flattened = previous_window.reshape(-1, num_assets)
 
+            # define optim_window as the window that is used for the optimization. It is previous_window + window-size
+            optim_window = rolling_windows[j+window]
+            optim_window_flattened = optim_window.reshape(-1, num_assets)
+            
             corr_coeff = calc_corr_coeff(most_recent_window_flattened.flatten(), previous_window_flattened.flatten())
 
             if abs(corr_coeff) > rho: 
                 
                 correlation_similiar_set_filled = True
-                correlation_similiar_set_list.append(previous_window_flattened)
+                correlation_similiar_set_list.append(optim_window_flattened)
 
         if correlation_similiar_set_filled:
             _weights_list = []
@@ -255,7 +258,7 @@ if __name__ == '__main__':
     np.savetxt(f'output/{investment_universe}_weights.csv', portfolio_weights, delimiter=",")
     
     plot_weights(investment_universe=investment_universe)
-    benchmarking(weights=portfolio_weights, log_returns=log_returns_array)
+    benchmarking(weights=portfolio_weights, log_returns=log_returns_array, window_size=window)
     
     #Elapsed = 801.9361368920017s #without numba
     #Elapsed = 71.72372195400021s # Factor 11.2 faster :)   fun calc_corr_coeff() implemented with numba, rest not
