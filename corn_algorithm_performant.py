@@ -123,6 +123,7 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
     '''
     ts_length = len(data)
     num_assets = len(data[0])
+    correlation_similiar_set_array = np.zeros((ts_length, num_assets)) #initialize correlation_similiar_set_array
     weights_array = np.zeros((ts_length, num_assets)) #initialize weights_array
     
     for i in range(0, (2*window)):
@@ -132,6 +133,8 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
     for i in range(2*window, len(data)): 
         most_recent_window = rolling_windows[i-window]
         most_recent_window_flattened = most_recent_window.reshape(-1, num_assets)
+        
+        correlation_similiar_set_filled = False 
 
         for j in range(i-window):
             
@@ -141,10 +144,21 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
             corr_coeff = calc_corr_coeff(most_recent_window_flattened.flatten(), previous_window_flattened.flatten())
 
             if corr_coeff > rho: 
-                weights = np.ones(num_assets) / 10
-                weights_array[i] = weights
                 
-                # collect all timeframes in Ct, then loop over them and calculate the weights by passing over the optim function
+                
+                # 1. add previous_window_flattened to correlation_similiar_set_array
+                # 2. if at least one is found, set correlation_similiar_set_filled to True
+                # 3. after loop, if correlation_similiar_set_filled is True, calculate weights for the most recent window by passing over to portfolio_optim function
+                # 4. save weights in weights_array at index i   
+                
+                correlation_similiar_set_filled = True
+                print(f'correlation_similiar_set_filled has been filled! corr_coeff: {corr_coeff}')
+                
+                
+                #weights_array[i] = weights
+                
+                
+                
                 
             else:
                 # calculate weights for the most recent window by equally weighting all assets
