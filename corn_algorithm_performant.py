@@ -63,7 +63,6 @@ def csv_to_numpy(investment_universe):
     return log_returns
 
 
-
 @nb.njit()
 def calc_corr_coeff(x, y):
     n = len(x)
@@ -114,6 +113,31 @@ def calc_equal_weights(num_assets):
     return weights
 
 
+def benchmarking(weights, log_returns):
+    
+    # Calculate the benchmark return for equal weights
+    benchmark_returns = np.sum(log_returns * calc_equal_weights(log_returns.shape[1]), axis=1)
+    
+    # Calculate cumulative returns
+    benchmark_cum_returns = np.exp(np.cumsum(benchmark_returns, axis=0))
+    
+    # Calculate the portfolio return for weights
+    corn_returns = np.sum(log_returns * weights, axis=1)
+    
+    # Calculate the benchmark return
+    corn_cum_returns = np.exp(np.cumsum(corn_returns, axis=0))
+
+    # plot the cumulative returns
+    plt.style.use('dark_background')
+    plt.figure(figsize=(20, 10))
+    plt.plot(benchmark_cum_returns, label='Benchmark')
+    plt.plot(corn_cum_returns, label='Portfolio')
+    plt.legend(loc='upper left')
+    plt.title('Cumulative returns')
+    plt.xlabel('Trading day')
+    plt.ylabel('Cumulative returns')
+    plt.savefig(f'output/{investment_universe}_cum_returns.png')
+    
 
 
 
@@ -231,7 +255,7 @@ if __name__ == '__main__':
     np.savetxt(f'output/{investment_universe}_weights.csv', portfolio_weights, delimiter=",")
     
     plot_weights(investment_universe=investment_universe)
-    
+    benchmarking(weights=portfolio_weights, log_returns=log_returns_array)
     
     #Elapsed = 801.9361368920017s #without numba
     #Elapsed = 71.72372195400021s # Factor 11.2 faster :)   fun calc_corr_coeff() implemented with numba, rest not
