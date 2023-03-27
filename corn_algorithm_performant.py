@@ -3,9 +3,6 @@ import pandas as pd
 import yfinance as yf
 import time
 
-from utils import *
-from portfolio_optimization import find_optimal_portfolio
-
 import numba as nb
 from scipy.optimize import minimize
 import time
