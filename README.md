@@ -2,10 +2,12 @@
 
 This repo aims to implement the CORN algorithm in Python 3. CORN stands for **COR**relation-driven **N**onparametric and was first introduced by Bin Li, Steven C. H. Hoi and Vivek Gopalkrishnan in 2011.
 
-The implementation here uses the same approach as to go optimize the weights with the *similiar-correlated-set* but instead of purely maximizing the return, paying attention also to minimizing risk. Also this implementation differs in a way, that it does not use the correlated window, but the subsequent window (as this is the one for which the optimization is done).
 
 *(LI, Bin; HOI, Steven C. H.; and Gopalkrishnan, Vivek. CORN: Correlation-driven Nonparametric Learning Approach for Portfolio Selection. (2011). ACM Transactions on Intelligent Systems and Technology. 2, (3),. Research Collection School Of Information Systems. Available at: http://ink.library.smu.edu.sg/sis_research/2265
 )*
+
+
+The implementation here uses the same approach as to optimize the weights with the *correlation-similiar-set* but instead of purely maximizing the return, paying attention also to minimizing risk. Also this implementation differs in a way, that it does not use the correlated window, but the subsequent window (as this is the one for which the optimization is done).
 
 The codebase provides functionality to download stock price data using Yahoo Finance API, perform portfolio optimization with the `minimize` function from Scipy, and benchmark the performance of the optimized portfolio against an equally-weighted pendant strategy and a simple SPY buy-and-hold strategy. The portfolio optimization problem is solved using quadratic programming and is subject to constraints on asset weights and a return target.
 
