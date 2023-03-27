@@ -128,6 +128,7 @@ def benchmarking(weights, log_returns, window_size):
     
     # Calculate the portfolio return for weights
     corn_returns = np.sum(log_returns * weights, axis=1)
+
     corn_cum_returns = np.exp(np.cumsum(corn_returns, axis=0))
 
     # plot the cumulative returns
@@ -145,7 +146,7 @@ def benchmarking(weights, log_returns, window_size):
     plt.savefig(f'output/{investment_universe}_cum_returns{len(weights)}.png')
 
 
-def find_optimal_portfolio(returns: np.array, return_target: float = None):
+def optimize_portfolio(returns: np.array, return_target: float = None):
     '''
     Long only portfolio optimization that maximizes returns and minimizes risk.
     '''
@@ -156,7 +157,7 @@ def find_optimal_portfolio(returns: np.array, return_target: float = None):
     constraints = [{'type': 'eq', 'fun': lambda x: np.sum(x) - 1}]
     x0 = np.ones(n_assets) / n_assets # start with equal weights
     
-    
+    ## Maximize Return / Minimize Risk ###
     def objective(x, returns: np.array):
         portfolio_return = np.sum(returns.mean(axis=0) * x)
         portfolio_risk = np.sqrt(np.dot(x.T, np.dot(np.cov(returns.T), x)))
@@ -170,6 +171,8 @@ def find_optimal_portfolio(returns: np.array, return_target: float = None):
 
     # Return the optimal weights and the Sharpe ratio as a tuple
     return sharpe_ratio, opt.x
+
+
 
 
 def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: int, rho: float) -> np.array:
@@ -217,7 +220,7 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
             # 3. select top k sharpe-ratios and calculate the average weights
             # 4. save weights in weights_array at index iq
             for elem in correlation_similiar_set_list:
-                _weights = find_optimal_portfolio(elem)
+                _weights = optimize_portfolio(elem)
                 _weights_list.append(_weights)
                 
             # calculate average weights, here we can tune a lot!
