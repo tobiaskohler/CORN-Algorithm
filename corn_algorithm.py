@@ -105,9 +105,7 @@ def benchmarking(weights, log_returns, window_size):
     corn_returns = np.sum(log_returns * weights, axis=1)
     corn_cum_returns = np.exp(np.cumsum(corn_returns, axis=0))
     
-    # calculate annualized return of corn_returns
     corn_annualized_return = np.mean(corn_returns) * 252
-    # #calculate annualized volatility of corn_returns
     corn_vol = np.std(corn_returns) * np.sqrt(252)
 
     plt.style.use('dark_background')
