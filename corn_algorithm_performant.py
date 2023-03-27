@@ -173,9 +173,34 @@ def optimize_portfolio(returns: np.array, return_target: float = None):
     return sharpe_ratio, opt.x
 
 
+def optimize_portfolio_predefined(returns: np.array, return_target: float = None):
+    '''
+    Long only portfolio optimization that maximizes returns and minimizes risk.
+    '''
+
+    # Set up the optimization problem
+    n_assets = returns.shape[1]
+    bounds = tuple((0,1) for _ in range(n_assets))
+    constraints = [{'type': 'eq', 'fun': lambda x: np.sum(x) - 1}]
+    x0 = np.ones(n_assets) / n_assets # start with equal weights
+    
+    ## Maximize Return / Minimize Risk ###
+    def objective(x, returns: np.array):
+        portfolio_return = np.sum(returns.mean(axis=0) * x)
+        portfolio_risk = np.sqrt(np.dot(x.T, np.dot(np.cov(returns.T), x)))
+        return -portfolio_return + portfolio_risk
+
+    # Solve the optimization problem
+    opt = minimize(objective, x0, args=returns, bounds=bounds, constraints=constraints)
+
+    # # Calculate the Sharpe ratio
+    # sharpe_ratio = np.sum(returns.mean(axis=0) * opt.x) / np.sqrt(np.dot(opt.x.T, np.dot(np.cov(returns.T), opt.x)))
+
+    # Return the optimal weights and the Sharpe ratio as a tuple
+    return (returns, opt.x)
 
 
-def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: int, rho: float) -> np.array:
+def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: int, rho: float, predefined_weights_list: np.array) -> np.array:
     '''
     Clean and simple implementation of the CORN algorithm. Supported by numba. Returns weights for each period.
     '''
@@ -220,9 +245,18 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
             # 3. select top k sharpe-ratios and calculate the average weights
             # 4. save weights in weights_array at index iq
             for elem in correlation_similiar_set_list:
-                _weights = optimize_portfolio(elem)
-                _weights_list.append(_weights)
-                
+                # _weights = optimize_portfolio(elem) # before implementing predefined_weights
+                # _weights_list.append(_weights) # before implementing predefined_weights
+
+                if any(np.array_equal(elem, tpl[0]) for tpl in predefined_weights_list):
+
+                    # print the found predefined weights
+                    for tpl in predefined_weights_list:
+                        if np.array_equal(elem, tpl[0]):
+                            _weights = tpl[1]
+                            _weights_list.append(_weights)
+                            
+
             # calculate average weights, here we can tune a lot!
             
             # implement NUMBA for portfolio_optim function!
@@ -234,6 +268,8 @@ def expert_portfolio_weight(data: np.array, rolling_windows: np.array, window: i
             # calculate weights for the most recent window by equally weighting all assets
             weights = calc_equal_weights(num_assets)
             weights_array[i] = weights
+            
+        print(f'Current iteration: {i}')
 
     return weights_array
 
@@ -255,8 +291,19 @@ if __name__ == '__main__':
     rho = 0.5
     window_shape = (window, len(log_returns_array[0]))
     rolling_windows = np.lib.stride_tricks.sliding_window_view(log_returns_array, window_shape)
+    
+    # loop over rolling_windows and calculate optimal weights for each window. save weights as array.
+    # init dummy array for weights
+    predefined_weights_list = []
+    
+    for elem in rolling_windows:
+        optim_window = elem.reshape(-1, len(investment_universe))
+        _optimal_weight = optimize_portfolio_predefined(optim_window)
 
-    portfolio_weights = expert_portfolio_weight(data=log_returns_array, rolling_windows=rolling_windows, window=window, rho=rho)
+        predefined_weights_list.append(_optimal_weight)
+    
+        
+    portfolio_weights = expert_portfolio_weight(data=log_returns_array, rolling_windows=rolling_windows, window=window, rho=rho, predefined_weights_list=predefined_weights_list)
     
     end = time.perf_counter()
     print("Elapsed = {}s".format((end - start)))
@@ -276,5 +323,5 @@ if __name__ == '__main__':
     
     #12 minuten für 600 datepunkten
     #Elapsed = 6778.527474586999s für 1000 datenpunkte - 112 minuten (1.8h)
-    
+    #Elapsed = 82.10473872800003s mit pre defined weights für 600 datenpunkte
     
