@@ -40,3 +40,18 @@ To use this codebase, you need to install the following Python packages:
 1. If you read papers regarding CORN or any derivatives of it, you really need to pay strong attention to the assumptions. Especially, transaction costs and rebalancing period. Most of the papers assume no tx-cost and a daily rebalancing.
 
 2. The code already makes use of numba (a JIT compiler that translates a subset of Python and NumPy code into fast machine code), to accelerate the calculations. But still, since we have to loop over the whole time series every day in order to calculate the correlation-similiar-set (correlated with the current window) it can take forever if you provide more than like 4-5 years of daily data. It can be optimized for performance even more, but I haven't had the time.
+
+
+## Performance
+
+**300 Trading days**
+
+![300 Trading days performance](/output/300days_perf.png)
+![300 Trading days weights](/output/300days_weights.png)
+
+
+
+**600 Trading days**
+
+![600 Trading days performance](/output/600days_perf.png)
+![600 Trading days weights](/output/600days_weights.png)
